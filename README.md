@@ -29,15 +29,22 @@ Proyek ini telah disesuaikan unuk Node.js v24 (v18+). Pastikan versi Node.js And
     npm install --legacy-peer-deps
     ```
 
-3.  Buat file `.env` di root direktori (sudah ada):
+3.  Salin file `.env.example` ke `.env` dan isi dengan konfigurasi Firebase Anda:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    Format `.env`:
+
     ```env
-    VITE_FIREBASE_API_KEY=AIzaSyCP9h4JIdeh2KnWnLPn9VXqqfAqNXFNPGY
-    VITE_FIREBASE_AUTH_DOMAIN=sapa-hebat.firebaseapp.com
-    VITE_FIREBASE_PROJECT_ID=sapa-hebat
-    VITE_FIREBASE_STORAGE_BUCKET=sapa-hebat.firebasestorage.app
-    VITE_FIREBASE_MESSAGING_SENDER_ID=273103032055
-    VITE_FIREBASE_APP_ID=1:273103032055:web:98555d16b8a83b4e508df2
-    VITE_FIREBASE_MEASUREMENT_ID=G-JW1J44T9VV
+    VITE_FIREBASE_API_KEY=your_api_key
+    VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+    VITE_FIREBASE_PROJECT_ID=your_project_id
+    VITE_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
+    VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+    VITE_FIREBASE_APP_ID=your_app_id
+    VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
     ```
 
 ## Menjalankan Aplikasi
