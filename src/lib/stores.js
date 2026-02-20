@@ -40,3 +40,8 @@ export const siswas = createCollectionStore(
   "users",
   where("role", "==", "siswa"),
 );
+
+export const activities = createCollectionStore(
+  "activities",
+  orderBy("created_at", "desc"),
+);
