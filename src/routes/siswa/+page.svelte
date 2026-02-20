@@ -18,6 +18,26 @@
   let editId = null;
   let isModalOpen = false;
 
+  let filterGuruId = "";
+  let filterOrtuId = "";
+
+  $: filteredSiswas = $siswas.filter((siswa) => {
+    // If filter is empty, return true (show all)
+    // Otherwise check if siswa.guru_id matches filter
+    // We use loose equality (==) or String() because IDs might be number or string
+    const matchGuru =
+      filterGuruId === "" ||
+      siswa.guru_id == filterGuruId ||
+      String(siswa.guru_id) === String(filterGuruId);
+
+    const matchOrtu =
+      filterOrtuId === "" ||
+      siswa.ortu_id == filterOrtuId ||
+      String(siswa.ortu_id) === String(filterOrtuId);
+
+    return matchGuru && matchOrtu;
+  });
+
   function openModal(user = null) {
     if (user) {
       username = user.username;
@@ -129,6 +149,38 @@
   </button>
 </div>
 
+<div class="mb-6 flex flex-wrap gap-4">
+  <div class="w-full md:w-64">
+    <label class="block text-sm font-medium text-gray-700 mb-1"
+      >Filter by Guru</label
+    >
+    <select
+      bind:value={filterGuruId}
+      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+    >
+      <option value="">All Gurus</option>
+      {#each $gurus as guru}
+        <option value={guru.id}>{guru.username}</option>
+      {/each}
+    </select>
+  </div>
+
+  <div class="w-full md:w-64">
+    <label class="block text-sm font-medium text-gray-700 mb-1"
+      >Filter by Ortu</label
+    >
+    <select
+      bind:value={filterOrtuId}
+      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+    >
+      <option value="">All Ortus</option>
+      {#each $ortus as ortu}
+        <option value={ortu.id}>{ortu.username}</option>
+      {/each}
+    </select>
+  </div>
+</div>
+
 <div
   class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
 >
@@ -158,7 +210,7 @@
       </tr>
     </thead>
     <tbody class="bg-white divide-y divide-gray-200">
-      {#each $siswas as siswa}
+      {#each filteredSiswas as siswa}
         <tr class="hover:bg-gray-50 transition-colors">
           <td
             class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-xs font-mono"
@@ -198,7 +250,7 @@
       {:else}
         <tr>
           <td colspan="5" class="px-6 py-10 text-center text-gray-500">
-            No students found. Click "Add Siswa" to create one.
+            No students found matching the filters.
           </td>
         </tr>
       {/each}
