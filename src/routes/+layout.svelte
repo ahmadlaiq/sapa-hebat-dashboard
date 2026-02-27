@@ -129,6 +129,31 @@
         </svg>
         Data Aktivitas
       </a>
+
+      <a
+        href="/laporan"
+        class="flex items-center px-6 py-3 transition-colors duration-200 {$page.url.pathname.startsWith(
+          '/laporan',
+        )
+          ? 'bg-indigo-50 text-indigo-600 border-r-4 border-indigo-600 font-medium'
+          : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5 mr-3"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+        Laporan
+      </a>
     </nav>
 
     <div class="p-4 border-t border-gray-100">
