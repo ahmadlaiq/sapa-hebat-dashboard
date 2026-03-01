@@ -14,12 +14,14 @@
   let password = "";
   let selectedGuruId = "";
   let selectedOrtuId = "";
+  let kelas = "7";
 
   let editId = null;
   let isModalOpen = false;
 
   let filterGuruId = "";
   let filterOrtuId = "";
+  let filterKelas = "";
 
   // Pagination
   let currentPage = 1;
@@ -27,7 +29,7 @@
 
   $: {
     // Reset page on filter change
-    if (filterGuruId || filterOrtuId) currentPage = 1;
+    if (filterGuruId || filterOrtuId || filterKelas) currentPage = 1;
   }
 
   $: filteredSiswas = $siswas.filter((siswa) => {
@@ -44,7 +46,9 @@
       siswa.ortu_id == filterOrtuId ||
       String(siswa.ortu_id) === String(filterOrtuId);
 
-    return matchGuru && matchOrtu;
+    const matchKelas = filterKelas === "" || siswa.kelas === filterKelas;
+
+    return matchGuru && matchOrtu && matchKelas;
   });
 
   $: totalPages = Math.ceil(filteredSiswas.length / itemsPerPage);
@@ -67,12 +71,14 @@
       password = user.password;
       selectedGuruId = user.guru_id || "";
       selectedOrtuId = user.ortu_id || "";
+      kelas = user.kelas || "7";
       editId = user._id;
     } else {
       username = "";
       password = "";
       selectedGuruId = "";
       selectedOrtuId = "";
+      kelas = "7";
       editId = null;
     }
     isModalOpen = true;
@@ -90,6 +96,7 @@
         password,
         guru_id: selectedGuruId,
         ortu_id: selectedOrtuId,
+        kelas,
       };
 
       if (editId) {
@@ -202,6 +209,21 @@
       {/each}
     </select>
   </div>
+
+  <div class="w-full md:w-64">
+    <label class="block text-sm font-medium text-gray-700 mb-1"
+      >Filter by Kelas</label
+    >
+    <select
+      bind:value={filterKelas}
+      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+    >
+      <option value="">All Kelas</option>
+      <option value="7">Kelas 7</option>
+      <option value="8">Kelas 8</option>
+      <option value="9">Kelas 9</option>
+    </select>
+  </div>
 </div>
 
 <div
@@ -217,6 +239,10 @@
         <th
           class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
           >Siswa Name</th
+        >
+        <th
+          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+          >Kelas</th
         >
         <th
           class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -242,6 +268,9 @@
           <td
             class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
             >{siswa.username}</td
+          >
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+            >{siswa.kelas || "7"}</td
           >
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
             <span
@@ -272,7 +301,7 @@
         </tr>
       {:else}
         <tr>
-          <td colspan="5" class="px-6 py-10 text-center text-gray-500">
+          <td colspan="6" class="px-6 py-10 text-center text-gray-500">
             No students found matching the filters.
           </td>
         </tr>
@@ -433,6 +462,20 @@
             {#each $ortus as ortu}
               <option value={ortu.id}>{ortu.username}</option>
             {/each}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1"
+            >Kelas</label
+          >
+          <select
+            bind:value={kelas}
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+          >
+            <option value="7">Kelas 7</option>
+            <option value="8">Kelas 8</option>
+            <option value="9">Kelas 9</option>
           </select>
         </div>
       </div>

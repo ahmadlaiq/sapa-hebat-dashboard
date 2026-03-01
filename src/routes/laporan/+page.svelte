@@ -2,6 +2,7 @@
   import { activities, siswas } from "$lib/stores";
 
   let filterSiswaId = "";
+  let filterKelas = "";
   let filterWaktu = "semua"; // "semua", "mingguan", "bulanan", "tahunan"
   let filterType = "";
 
@@ -24,6 +25,13 @@
       filterSiswaId === "" ||
       act.user_id == filterSiswaId ||
       String(act.user_id) === String(filterSiswaId);
+
+    // Get the student's class to apply the class filter
+    const siswa = $siswas.find(
+      (s) => s.id == act.user_id || s._id == act.user_id,
+    );
+    const siswaKelas = siswa ? siswa.kelas || "7" : "7";
+    const matchKelas = filterKelas === "" || siswaKelas === filterKelas;
 
     const matchType = filterType === "" || act.activity_type === filterType;
 
@@ -48,7 +56,7 @@
       }
     }
 
-    return matchSiswa && matchType && matchWaktu;
+    return matchSiswa && matchType && matchWaktu && matchKelas;
   });
 
   // Calculate Summary
@@ -62,7 +70,7 @@
 
   // Reset pagination when filter changes
   $: {
-    if (filterSiswaId || filterType || filterWaktu) {
+    if (filterSiswaId || filterType || filterWaktu || filterKelas) {
       currentPage = 1;
     }
   }
@@ -204,6 +212,23 @@
       {/each}
     </select>
   </div>
+
+  <div class="w-full md:w-64">
+    <label
+      for="filter-kelas"
+      class="block text-sm font-medium text-gray-700 mb-1">Filter Kelas</label
+    >
+    <select
+      id="filter-kelas"
+      bind:value={filterKelas}
+      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+    >
+      <option value="">Semua Kelas</option>
+      <option value="7">Kelas 7</option>
+      <option value="8">Kelas 8</option>
+      <option value="9">Kelas 9</option>
+    </select>
+  </div>
 </div>
 
 <!-- Table -->
@@ -221,6 +246,10 @@
           <th
             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
             >Siswa</th
+          >
+          <th
+            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+            >Kelas</th
           >
           <th
             class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -246,6 +275,14 @@
               class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
             >
               {getSiswaName(activity.user_id)}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+              {(() => {
+                const s = $siswas.find(
+                  (x) => x.id == activity.user_id || x._id == activity.user_id,
+                );
+                return s ? s.kelas || "7" : "7";
+              })()}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
               <span
@@ -278,7 +315,7 @@
           </tr>
         {:else}
           <tr>
-            <td colspan="5" class="px-6 py-10 text-center text-gray-500">
+            <td colspan="6" class="px-6 py-10 text-center text-gray-500">
               Tidak ada aktivitas ditemukan untuk filter saat ini.
             </td>
           </tr>
