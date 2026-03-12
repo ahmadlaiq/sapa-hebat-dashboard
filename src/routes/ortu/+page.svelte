@@ -9,6 +9,7 @@
     deleteDoc,
   } from "firebase/firestore";
   import Swal from "sweetalert2";
+  import { exportToExcel, importFromExcel, downloadTemplate } from "$lib/excel";
 
   let username = "";
   let password = "";
@@ -100,6 +101,72 @@
       }
     }
   }
+
+  function handleExport() {
+    const dataToExport = $ortus.map((o) => ({
+      ID: o.id,
+      Username: o.username,
+      Password: o.password,
+    }));
+    exportToExcel(dataToExport, "Data_Ortu");
+  }
+
+  function handleDownloadTemplate() {
+    downloadTemplate(["username", "password"], "Template_Import_Ortu");
+  }
+
+  async function handleImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const data = await importFromExcel(file);
+      if (data.length === 0) {
+        Swal.fire("Error", "Excel file is empty", "error");
+        return;
+      }
+
+      const result = await Swal.fire({
+        title: "Import Data?",
+        text: `You are about to import ${data.length} parents.`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Yes, import",
+      });
+
+      if (result.isConfirmed) {
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const item of data) {
+          try {
+            if (!item.username || !item.password) {
+              errorCount++;
+              continue;
+            }
+
+            await addDoc(collection(db, "users"), {
+              username: String(item.username),
+              password: String(item.password),
+              role: "ortu",
+              id: Date.now() + Math.floor(Math.random() * 1000),
+            });
+            successCount++;
+          } catch (e) {
+            console.error(e);
+            errorCount++;
+          }
+        }
+
+        Swal.fire("Import Complete", `Successfully imported ${successCount} parents. Errors: ${errorCount}`, "success");
+      }
+    } catch (e) {
+      console.error(e);
+      Swal.fire("Error", "Failed to import Excel: " + e.message, "error");
+    } finally {
+      event.target.value = "";
+    }
+  }
 </script>
 
 <div class="flex justify-between items-center mb-6">
@@ -107,24 +174,83 @@
     <h1 class="text-3xl font-bold text-gray-800">Data Ortu</h1>
     <p class="text-gray-500 mt-1">Manage parents data and access</p>
   </div>
-  <button
-    on:click={() => openModal()}
-    class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow transition-colors flex items-center"
-  >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      class="h-5 w-5 mr-2"
-      viewBox="0 0 20 20"
-      fill="currentColor"
+  <div class="flex gap-2">
+    <button
+      on:click={handleExport}
+      class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-lg shadow transition-colors flex items-center"
     >
-      <path
-        fill-rule="evenodd"
-        d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-        clip-rule="evenodd"
-      />
-    </svg>
-    Add Ortu
-  </button>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-5 w-5 mr-2"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+          clip-rule="evenodd"
+        />
+      </svg>
+      Download Excel
+    </button>
+
+    <label
+      class="bg-amber-600 hover:bg-amber-700 text-white font-medium py-2 px-4 rounded-lg shadow transition-colors flex items-center cursor-pointer"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-5 w-5 mr-2"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM10 3a1 1 0 011 1v6.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414L9 10.586V4a1 1 0 011-1z"
+          clip-rule="evenodd"
+        />
+      </svg>
+      Import Excel
+      <input type="file" accept=".xlsx, .xls" on:change={handleImport} class="hidden" />
+    </label>
+
+    <button
+      on:click={handleDownloadTemplate}
+      class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg shadow transition-colors flex items-center"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-5 w-5 mr-2"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z"
+          clip-rule="evenodd"
+        />
+      </svg>
+      Template
+    </button>
+
+    <button
+      on:click={() => openModal()}
+      class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow transition-colors flex items-center"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-5 w-5 mr-2"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+          clip-rule="evenodd"
+        />
+      </svg>
+      Add Ortu
+    </button>
+  </div>
 </div>
 
 <div
