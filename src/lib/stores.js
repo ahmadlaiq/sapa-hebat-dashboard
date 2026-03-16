@@ -41,6 +41,11 @@ export const siswas = createCollectionStore(
   where("role", "==", "siswa"),
 );
 
+export const kelases = createCollectionStore(
+  "kelas",
+  orderBy("name", "asc"),
+);
+
 export const activities = createCollectionStore(
   "activities",
   orderBy("created_at", "desc"),

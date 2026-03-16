@@ -1,5 +1,5 @@
 <script>
-  import { siswas, gurus, ortus } from "$lib/stores";
+  import { siswas, gurus, ortus, kelases } from "$lib/stores";
   import { db } from "$lib/firebase";
   import {
     collection,
@@ -15,7 +15,7 @@
   let password = "";
   let selectedGuruId = "";
   let selectedOrtuId = "";
-  let kelas = "7";
+  let kelas = "";
 
   let editId = null;
   let isModalOpen = false;
@@ -72,14 +72,14 @@
       password = user.password;
       selectedGuruId = user.guru_id || "";
       selectedOrtuId = user.ortu_id || "";
-      kelas = user.kelas || "7";
+      kelas = user.kelas || "";
       editId = user._id;
     } else {
       username = "";
       password = "";
       selectedGuruId = "";
       selectedOrtuId = "";
-      kelas = "7";
+      kelas = $kelases.length > 0 ? $kelases[0].name : "";
       editId = null;
     }
     isModalOpen = true;
@@ -206,7 +206,7 @@
               password: String(item.password),
               guru_id: item.guru_id,
               ortu_id: item.ortu_id,
-              kelas: String(item.kelas || "7"),
+              kelas: String(item.kelas || ""),
               role: "siswa",
               id: Date.now() + Math.floor(Math.random() * 1000), // Unique enough for batch
             });
@@ -352,9 +352,9 @@
       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
     >
       <option value="">All Kelas</option>
-      <option value="7">Kelas 7</option>
-      <option value="8">Kelas 8</option>
-      <option value="9">Kelas 9</option>
+      {#each $kelases as item}
+        <option value={item.name}>{item.name}</option>
+      {/each}
     </select>
   </div>
 </div>
@@ -403,7 +403,7 @@
             >{siswa.username}</td
           >
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-            >{siswa.kelas || "7"}</td
+            >{siswa.kelas || "-"}</td
           >
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
             <span
@@ -606,9 +606,9 @@
             bind:value={kelas}
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
           >
-            <option value="7">Kelas 7</option>
-            <option value="8">Kelas 8</option>
-            <option value="9">Kelas 9</option>
+            {#each $kelases as item}
+              <option value={item.name}>{item.name}</option>
+            {/each}
           </select>
         </div>
       </div>
