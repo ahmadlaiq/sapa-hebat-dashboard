@@ -41,23 +41,56 @@
       const now = new Date();
 
       if (filterWaktu === "mingguan") {
-        // Pengecekan apakah dalam 7 hari terakhir
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(now.getDate() - 7);
         matchWaktu = actDate >= sevenDaysAgo && actDate <= now;
       } else if (filterWaktu === "bulanan") {
-        // Pengecekan apakah di bulan yang sama di tahun ini
         matchWaktu =
           actDate.getMonth() === now.getMonth() &&
           actDate.getFullYear() === now.getFullYear();
       } else if (filterWaktu === "tahunan") {
-        // Pengecekan apakah di tahun yang sama
         matchWaktu = actDate.getFullYear() === now.getFullYear();
       }
     }
 
     return matchSiswa && matchType && matchWaktu && matchKelas;
   });
+
+  // Calculate Grouped Activities (Date + Student)
+  $: groupedActivities = (() => {
+    const map = new Map();
+    
+    // Process filtered activities
+    filteredActivities.forEach(act => {
+      if (!act.created_at) return;
+      
+      const dateObj = new Date(act.created_at);
+      const dateStr = dateObj.toLocaleDateString("id-ID", {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      const name = getSiswaName(act.user_id);
+      const key = `${dateStr}_${act.user_id}`;
+      
+      if (!map.has(key)) {
+        const s = $siswas.find(x => x.id == act.user_id || x._id == act.user_id);
+        map.set(key, {
+          date: dateStr,
+          rawDate: dateObj,
+          studentName: name,
+          studentId: act.user_id,
+          kelas: s ? s.kelas || "7" : "7",
+          acts: []
+        });
+      }
+      
+      map.get(key).acts.push(act);
+    });
+    
+    // Convert to array and sort by date (newest first)
+    return Array.from(map.values()).sort((a, b) => b.rawDate - a.rawDate);
+  })();
 
   // Calculate Summary
   $: totalActivities = filteredActivities.length;
@@ -75,9 +108,9 @@
     }
   }
 
-  // Pagination Logic
-  $: totalPages = Math.ceil(filteredActivities.length / itemsPerPage);
-  $: paginatedActivities = filteredActivities.slice(
+  // Pagination Logic (Grouped)
+  $: totalPages = Math.ceil(groupedActivities.length / itemsPerPage);
+  $: paginatedActivities = groupedActivities.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
@@ -93,100 +126,156 @@
   function printReport() {
     window.print();
   }
+
+  function exportToCSV() {
+    const headers = ["Tanggal", "Nama Siswa", "Kelas", "Kegiatan", "Status"];
+    const rows = groupedActivities.map(g => {
+      const kegiatan = g.acts.map(a => `${a.activity_type}: ${a.items || a.notes || "-"}`).join("; ");
+      const isVerified = g.acts.every(a => a.status_guru === "verified" && a.status_ortu === "verified");
+      const status = isVerified ? "Terverifikasi" : "Pending/Ditolak";
+      
+      return [
+        g.date,
+        g.studentName,
+        g.kelas,
+        `"${kegiatan.replace(/"/g, '""')}"`,
+        status
+      ];
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+      
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Laporan_Aktivitas_${new Date().toLocaleDateString('id-ID').replace(/\//g, '-')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 </script>
 
-<div class="mb-6 flex justify-between items-center print:hidden">
+<div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
   <div>
-    <h1 class="text-3xl font-bold text-gray-800">Laporan Aktivitas Siswa</h1>
-    <p class="text-gray-500 mt-1">
-      Laporan kegiatan siswa berdasarkan periode waktu
+    <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Laporan Aktivitas</h1>
+    <p class="text-gray-500 mt-1 font-medium">
+      Ringkasan kegiatan harian siswa kelas {filterKelas || "semua"}
     </p>
   </div>
-  <button
-    on:click={printReport}
-    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2"
-  >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      class="h-5 w-5"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
+  <div class="flex gap-2 w-full sm:w-auto">
+    <button
+      on:click={exportToCSV}
+      class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-semibold shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95"
     >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-      />
-    </svg>
-    Cetak Laporan
-  </button>
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      Excel (.csv)
+    </button>
+    <button
+      on:click={printReport}
+      class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-semibold shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-5 w-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+        />
+      </svg>
+      Cetak PDF
+    </button>
+  </div>
 </div>
 
 <!-- Header for Print -->
-<div class="hidden print:block mb-8 text-center">
-  <h1 class="text-2xl font-bold">Laporan Aktivitas Siswa</h1>
-  <p class="text-gray-600">
-    Periode:
-    {filterWaktu === "semua"
-      ? "Semua Waktu"
-      : filterWaktu === "mingguan"
-        ? "7 Hari Terakhir"
-        : filterWaktu === "bulanan"
-          ? "Hingga Bulan Ini"
-          : "Tahun Ini"}
+<div class="hidden print:block mb-10 text-center border-b-2 border-gray-900 pb-6">
+  <h1 class="text-3xl font-bold uppercase tracking-widest">Laporan Aktivitas Harian Siswa</h1>
+  <p class="text-lg font-medium text-gray-700 mt-2">
+    SAPA HEBAT - Sistem Aplikasi Pantau Anak
   </p>
+  <div class="flex justify-center gap-10 mt-4 text-sm font-semibold">
+    <p>Periode: {filterWaktu === "semua" ? "Semua Waktu" : filterWaktu}</p>
+    <p>Kelas: {filterKelas || "Semua"}</p>
+    <p>Tanggal Cetak: {new Date().toLocaleDateString('id-ID')}</p>
+  </div>
 </div>
 
 <!-- Summary Cards -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-    <div class="text-sm font-medium text-gray-500 mb-1">Total Aktivitas</div>
-    <div class="text-3xl font-bold text-gray-900">{totalActivities}</div>
-  </div>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-    <div class="text-sm font-medium text-gray-500 mb-1">
-      Aktivitas Terverifikasi
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 print:mb-10">
+  <div class="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-sm border border-gray-100 p-6 relative overflow-hidden group">
+    <div class="relative z-10">
+      <div class="text-sm font-bold text-gray-400 uppercase tracking-tighter mb-1">Total Aktivitas</div>
+      <div class="text-4xl font-black text-gray-900">{totalActivities}</div>
     </div>
-    <div class="text-3xl font-bold text-green-600">{verifiedActivities}</div>
+    <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg>
+    </div>
   </div>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-    <div class="text-sm font-medium text-gray-500 mb-1">Menunggu/Ditolak</div>
-    <div class="text-3xl font-bold text-amber-500">{pendingActivities}</div>
+  <div class="bg-gradient-to-br from-white to-green-50 rounded-2xl shadow-sm border border-green-100 p-6 relative overflow-hidden group">
+    <div class="relative z-10">
+      <div class="text-sm font-bold text-green-600/60 uppercase tracking-tighter mb-1">Terverifikasi</div>
+      <div class="text-4xl font-black text-green-600">{verifiedActivities}</div>
+    </div>
+    <div class="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform text-green-600">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </div>
+  </div>
+  <div class="bg-gradient-to-br from-white to-amber-50 rounded-2xl shadow-sm border border-amber-100 p-6 relative overflow-hidden group">
+    <div class="relative z-10">
+      <div class="text-sm font-bold text-amber-600/60 uppercase tracking-tighter mb-1">Menunggu/Ditolak</div>
+      <div class="text-4xl font-black text-amber-500">{pendingActivities}</div>
+    </div>
+    <div class="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform text-amber-500">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </div>
   </div>
 </div>
 
 <!-- Filters (Hidden on Print) -->
 <div
-  class="mb-6 flex flex-wrap gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm print:hidden"
+  class="mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-md shadow-gray-200/50 print:hidden"
 >
-  <div class="w-full md:w-64">
+  <div>
     <label
       for="filter-waktu"
-      class="block text-sm font-medium text-gray-700 mb-1">Periode Waktu</label
+      class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Periode</label
     >
     <select
       id="filter-waktu"
       bind:value={filterWaktu}
-      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+      class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-gray-700"
     >
       <option value="semua">Semua Waktu</option>
-      <option value="mingguan">Mingguan (7 Hari Terakhir)</option>
-      <option value="bulanan">Bulanan (Bulan Ini)</option>
-      <option value="tahunan">Tahunan (Tahun Ini)</option>
+      <option value="mingguan">7 Hari Terakhir</option>
+      <option value="bulanan">Bulan Ini</option>
+      <option value="tahunan">Tahun Ini</option>
     </select>
   </div>
 
-  <div class="w-full md:w-64">
+  <div>
     <label
       for="filter-siswa"
-      class="block text-sm font-medium text-gray-700 mb-1">Filter Siswa</label
+      class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Siswa</label
     >
     <select
       id="filter-siswa"
       bind:value={filterSiswaId}
-      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+      class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-gray-700"
     >
       <option value="">Semua Siswa</option>
       {#each $siswas as siswa}
@@ -195,16 +284,15 @@
     </select>
   </div>
 
-  <div class="w-full md:w-64">
+  <div>
     <label
       for="filter-tipe"
-      class="block text-sm font-medium text-gray-700 mb-1"
-      >Filter Tipe Aktivitas</label
+      class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Tipe</label
     >
     <select
       id="filter-tipe"
       bind:value={filterType}
-      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+      class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-gray-700"
     >
       <option value="">Semua Tipe</option>
       {#each activityTypes as type}
@@ -213,15 +301,15 @@
     </select>
   </div>
 
-  <div class="w-full md:w-64">
+  <div>
     <label
       for="filter-kelas"
-      class="block text-sm font-medium text-gray-700 mb-1">Filter Kelas</label
+      class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Kelas</label
     >
     <select
       id="filter-kelas"
       bind:value={filterKelas}
-      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+      class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-gray-700"
     >
       <option value="">Semua Kelas</option>
       <option value="7">Kelas 7</option>
@@ -233,90 +321,82 @@
 
 <!-- Table -->
 <div
-  class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6"
+  class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6"
 >
   <div class="overflow-x-auto">
     <table class="min-w-full divide-y divide-gray-200">
       <thead class="bg-gray-50">
         <tr>
           <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+            class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200"
             >Tanggal</th
           >
           <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >Siswa</th
+            class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200"
+            >Nama Siswa</th
           >
           <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+            class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200"
             >Kelas</th
           >
           <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >Tipe</th
+            class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200"
+            >Kegiatan</th
           >
           <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >Detail Info</th
-          >
-          <th
-            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >Status Verifikasi</th
+            class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200"
+            >Status</th
           >
         </tr>
       </thead>
-      <tbody class="bg-white divide-y divide-gray-200">
-        {#each paginatedActivities as activity}
-          <tr class="hover:bg-gray-50 transition-colors">
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {new Date(activity.created_at).toLocaleDateString()}
+      <tbody class="bg-white divide-y divide-gray-100">
+        {#each paginatedActivities as group}
+          <tr class="hover:bg-gray-50/50 transition-colors">
+            <td class="px-6 py-5 whitespace-nowrap text-sm font-semibold text-gray-600">
+              {group.date}
             </td>
-            <td
-              class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
-            >
-              {getSiswaName(activity.user_id)}
+            <td class="px-6 py-5 whitespace-nowrap">
+              <div class="text-sm font-bold text-gray-900">{group.studentName}</div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-              {(() => {
-                const s = $siswas.find(
-                  (x) => x.id == activity.user_id || x._id == activity.user_id,
-                );
-                return s ? s.kelas || "7" : "7";
-              })()}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-              <span
-                class="bg-blue-50 text-blue-700 py-1 px-2 rounded text-xs font-semibold uppercase tracking-wide"
-              >
-                {activity.activity_type}
+            <td class="px-6 py-5 whitespace-nowrap">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600">
+                Kelas {group.kelas}
               </span>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
-              {activity.items || activity.notes || "-"}
+            <td class="px-6 py-5">
+              <div class="flex flex-wrap gap-1.5 max-w-lg">
+                {#each group.acts as act}
+                  <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-100 mb-1">
+                    <span class="font-bold uppercase tracking-tight">{act.activity_type}</span>
+                    <span class="text-indigo-300">|</span>
+                    <span class="text-indigo-600/80 italic">{act.items || act.notes || "-"}</span>
+                  </div>
+                {/each}
+              </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              {#if activity.status_guru === "verified" && activity.status_ortu === "verified"}
+            <td class="px-6 py-5 whitespace-nowrap">
+              {#if group.acts.every(a => a.status_guru === "verified" && a.status_ortu === "verified")}
                 <span
-                  class="bg-green-100 text-green-800 py-1 px-2 rounded-full text-xs font-medium"
-                  >Terverifikasi Penuh</span
-                >
-              {:else if activity.status_guru === "rejected" || activity.status_ortu === "rejected"}
-                <span
-                  class="bg-red-100 text-red-800 py-1 px-2 rounded-full text-xs font-medium"
-                  >Ditolak</span
+                  class="bg-green-100 text-green-700 py-1.5 px-3 rounded-xl text-xs font-bold uppercase tracking-tighter"
+                  >Tuntas</span
                 >
               {:else}
                 <span
-                  class="bg-yellow-100 text-yellow-800 py-1 px-2 rounded-full text-xs font-medium"
-                  >Menunggu Verifikasi</span
+                  class="bg-amber-100 text-amber-700 py-1.5 px-3 rounded-xl text-xs font-bold uppercase tracking-tighter"
+                  >Pending</span
                 >
               {/if}
             </td>
           </tr>
         {:else}
           <tr>
-            <td colspan="6" class="px-6 py-10 text-center text-gray-500">
-              Tidak ada aktivitas ditemukan untuk filter saat ini.
+            <td colspan="5" class="px-6 py-16 text-center text-gray-400 font-medium">
+              <div class="flex flex-col items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Belum ada data untuk filter ini
+              </div>
             </td>
           </tr>
         {/each}
@@ -327,90 +407,64 @@
   <!-- Pagination Controls (Hidden on Print) -->
   {#if totalPages > 1}
     <div
-      class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 print:hidden"
+      class="bg-gray-50/50 px-6 py-4 flex items-center justify-between border-t border-gray-100 print:hidden"
     >
-      <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+      <div class="flex-1 flex items-center justify-between">
         <div>
-          <p class="text-sm text-gray-700">
-            Menampilkan
-            <span class="font-medium"
-              >{(currentPage - 1) * itemsPerPage + 1}</span
-            >
-            hingga
-            <span class="font-medium"
-              >{Math.min(
-                currentPage * itemsPerPage,
-                filteredActivities.length,
-              )}</span
-            >
-            dari
-            <span class="font-medium">{filteredActivities.length}</span>
-            hasil
+          <p class="text-sm text-gray-500 font-medium">
+            Hal. <span class="text-gray-900">{currentPage}</span> dari <span class="text-gray-900">{totalPages}</span>
+            <span class="mx-2 opacity-30">|</span>
+            <span class="text-gray-400">{groupedActivities.length} Entri Harian</span>
           </p>
         </div>
-        <div>
-          <nav
-            class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-            aria-label="Pagination"
+        <div class="flex gap-2">
+          <button
+            on:click={prevPage}
+            disabled={currentPage === 1}
+            class="px-4 py-2 border border-gray-200 rounded-xl bg-white text-sm font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
           >
-            <button
-              on:click={prevPage}
-              disabled={currentPage === 1}
-              class:opacity-50={currentPage === 1}
-              class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-            >
-              <span class="sr-only">Previous</span>
-              <svg
-                class="h-5 w-5"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-            </button>
-
-            {#each Array(totalPages) as _, i}
-              <button
-                on:click={() => (currentPage = i + 1)}
-                class="relative inline-flex items-center px-4 py-2 border text-sm font-medium
-                            {currentPage === i + 1
-                  ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                  : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}"
-              >
-                {i + 1}
-              </button>
-            {/each}
-
-            <button
-              on:click={nextPage}
-              disabled={currentPage === totalPages}
-              class:opacity-50={currentPage === totalPages}
-              class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-            >
-              <span class="sr-only">Next</span>
-              <svg
-                class="h-5 w-5"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-            </button>
-          </nav>
+            Kembali
+          </button>
+          <button
+            on:click={nextPage}
+            disabled={currentPage === totalPages}
+            class="px-4 py-2 border border-gray-200 rounded-xl bg-white text-sm font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
+          >
+            Lanjut
+          </button>
         </div>
       </div>
     </div>
   {/if}
 </div>
+
+<style>
+  @media print {
+    :global(body) {
+      background-color: white !important;
+    }
+    .print-hide {
+      display: none !important;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #e5e7eb !important;
+      padding: 12px 8px !important;
+    }
+    th {
+      background-color: #f9fafb !important;
+      color: black !important;
+    }
+    /* Ensure kegiatan list looks good in print */
+    .inline-flex {
+      border: 1px solid #e2e8f0 !important;
+      background: none !important;
+      color: black !important;
+      margin-right: 4px;
+      margin-bottom: 2px;
+    }
+  }
+</style>
