@@ -43,7 +43,7 @@
     const siswa = $siswas.find(
       (s) => s.id == act.user_id || s._id == act.user_id,
     );
-    const siswaKelas = siswa ? siswa.kelas || "7" : "7";
+    const siswaKelas = siswa ? (siswa.kelas || "-") : "-";
     const matchKelas = filterKelas === "" || siswaKelas === filterKelas;
 
     const matchType = filterType === "" || act.activity_type === filterType;
@@ -115,7 +115,7 @@
     const rows = sortedActivities.map(act => {
       const siswa = $siswas.find((s) => s.id == act.user_id || s._id == act.user_id);
       const siswaName = siswa ? siswa.username : `Unknown (${act.user_id})`;
-      const kelas = siswa ? siswa.kelas || "7" : "7";
+      const kelas = siswa ? (siswa.kelas || "-") : "-";
       const tanggal = act.created_at ? new Date(act.created_at).toLocaleString('id-ID') : "-";
       
       return [
@@ -379,7 +379,7 @@
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600">
-                Kelas {siswaObj ? (siswaObj.kelas || "7") : "7"}
+                {siswaObj && siswaObj.kelas ? `Kelas ${siswaObj.kelas}` : "-"}
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
