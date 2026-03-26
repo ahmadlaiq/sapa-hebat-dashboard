@@ -1,5 +1,10 @@
 import jQuery from 'jquery';
-import 'select2';
+
+// Ensure jQuery is available globally for plugins that might need it
+if (typeof window !== 'undefined') {
+  window.$ = window.jQuery = jQuery;
+}
+
 
 /**
  * Svelte Action to initialize Select2 on a select element.
@@ -8,7 +13,8 @@ import 'select2';
 export function select2Action(node, options = {}) {
   const $node = jQuery(node);
   
-  function init() {
+  async function init() {
+    await import('select2');
     $node.select2({
       placeholder: options.placeholder || '',
       width: '100%',
