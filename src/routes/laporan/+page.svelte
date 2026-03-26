@@ -57,41 +57,11 @@
     return matchSiswa && matchType && matchWaktu && matchKelas;
   });
 
-  // Calculate Grouped Activities (Date + Student)
-  $: groupedActivities = (() => {
-    const map = new Map();
-    
-    // Process filtered activities
-    filteredActivities.forEach(act => {
-      if (!act.created_at) return;
-      
-      const dateObj = new Date(act.created_at);
-      const dateStr = dateObj.toLocaleDateString("id-ID", {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-      const name = getSiswaName(act.user_id);
-      const key = `${dateStr}_${act.user_id}`;
-      
-      if (!map.has(key)) {
-        const s = $siswas.find(x => x.id == act.user_id || x._id == act.user_id);
-        map.set(key, {
-          date: dateStr,
-          rawDate: dateObj,
-          studentName: name,
-          studentId: act.user_id,
-          kelas: s ? s.kelas || "7" : "7",
-          acts: []
-        });
-      }
-      
-      map.get(key).acts.push(act);
-    });
-    
-    // Convert to array and sort by date (newest first)
-    return Array.from(map.values()).sort((a, b) => b.rawDate - a.rawDate);
-  })();
+  // Sort activities newest first
+  $: sortedActivities = [...filteredActivities].sort((a, b) => {
+    const memDate = (dateStr) => dateStr ? new Date(dateStr) : new Date(0);
+    return memDate(b.created_at) - memDate(a.created_at);
+  });
 
   // Calculate Summary
   $: totalActivities = filteredActivities.length;
@@ -109,9 +79,9 @@
     }
   }
 
-  // Pagination Logic (Grouped)
-  $: totalPages = Math.ceil(groupedActivities.length / itemsPerPage);
-  $: paginatedActivities = groupedActivities.slice(
+  // Pagination Logic
+  $: totalPages = Math.ceil(sortedActivities.length / itemsPerPage);
+  $: paginatedActivities = sortedActivities.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
@@ -129,18 +99,21 @@
   }
 
   function exportToCSV() {
-    const headers = ["Tanggal", "Nama Siswa", "Kelas", "Kegiatan", "Status"];
-    const rows = groupedActivities.map(g => {
-      const kegiatan = g.acts.map(a => `${a.activity_type}: ${a.items || a.notes || "-"}`).join("; ");
-      const isVerified = g.acts.every(a => a.status_guru === "verified" && a.status_ortu === "verified");
-      const status = isVerified ? "Terverifikasi" : "Pending/Ditolak";
+    const headers = ["Tanggal", "Nama Siswa", "Kelas", "Tipe Aktivitas", "Detail/Catatan", "Status Guru", "Status Ortu"];
+    const rows = sortedActivities.map(act => {
+      const siswa = $siswas.find((s) => s.id == act.user_id || s._id == act.user_id);
+      const siswaName = siswa ? siswa.username : `Unknown (${act.user_id})`;
+      const kelas = siswa ? siswa.kelas || "7" : "7";
+      const tanggal = act.created_at ? new Date(act.created_at).toLocaleString('id-ID') : "-";
       
       return [
-        g.date,
-        g.studentName,
-        g.kelas,
-        `"${kegiatan.replace(/"/g, '""')}"`,
-        status
+        `"${tanggal}"`,
+        `"${siswaName}"`,
+        `"${kelas}"`,
+        `"${act.activity_type || '-'}"`,
+        `"${(act.items || act.notes || '-').replace(/"/g, '""')}"`,
+        `"${act.status_guru || 'pending'}"`,
+        `"${act.status_ortu || 'pending'}"`
       ];
     });
 
@@ -334,11 +307,11 @@
         <tr>
           <th
             class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200"
-            >Tanggal</th
+            >Waktu</th
           >
           <th
             class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200"
-            >Nama Siswa</th
+            >Siswa</th
           >
           <th
             class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200"
@@ -346,61 +319,75 @@
           >
           <th
             class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200"
-            >Kegiatan</th
+            >Tipe</th
           >
           <th
             class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200"
-            >Status</th
+            >Detail/Catatan</th
+          >
+          <th
+            class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200"
+            >Status Guru</th
+          >
+          <th
+            class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-200"
+            >Status Ortu</th
           >
         </tr>
       </thead>
       <tbody class="bg-white divide-y divide-gray-100">
-        {#each paginatedActivities as group}
+        {#each paginatedActivities as activity}
+          {@const siswaObj = $siswas.find(s => s.id == activity.user_id || s._id == activity.user_id)}
           <tr class="hover:bg-gray-50/50 transition-colors">
-            <td class="px-6 py-5 whitespace-nowrap text-sm font-semibold text-gray-600">
-              {group.date}
-            </td>
-            <td class="px-6 py-5 whitespace-nowrap">
-              <div class="text-sm font-bold text-gray-900">{group.studentName}</div>
-            </td>
-            <td class="px-6 py-5 whitespace-nowrap">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600">
-                Kelas {group.kelas}
-              </span>
-            </td>
-            <td class="px-6 py-5">
-              <div class="flex flex-wrap gap-1.5 max-w-lg">
-                {#each group.acts as act}
-                  <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium border border-indigo-100 mb-1">
-                    <span class="font-bold uppercase tracking-tight">{act.activity_type}</span>
-                    <span class="text-indigo-300">|</span>
-                    <span class="text-indigo-600/80 italic">{act.items || act.notes || "-"}</span>
-                  </div>
-                {/each}
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <div class="font-semibold text-gray-900">{activity.created_at ? new Date(activity.created_at).toLocaleDateString() : "-"}</div>
+              <div class="text-xs text-gray-400">
+                {activity.created_at ? new Date(activity.created_at).toLocaleTimeString() : ""}
               </div>
             </td>
-            <td class="px-6 py-5 whitespace-nowrap">
-              {#if group.acts.every(a => a.status_guru === "verified" && a.status_ortu === "verified")}
-                <span
-                  class="bg-green-100 text-green-700 py-1.5 px-3 rounded-xl text-xs font-bold uppercase tracking-tighter"
-                  >Tuntas</span
-                >
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm font-bold text-gray-900">{getSiswaName(activity.user_id)}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600">
+                Kelas {siswaObj ? (siswaObj.kelas || "7") : "7"}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="bg-blue-50 text-blue-700 py-1 px-2 rounded-lg text-xs font-bold uppercase tracking-tight">
+                {activity.activity_type}
+              </span>
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-600 max-w-sm truncate font-medium">
+              {activity.items || activity.notes || "-"}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              {#if activity.status_guru === "verified"}
+                <span class="bg-green-100 text-green-700 py-1.5 px-3 rounded-xl text-xs font-bold uppercase tracking-tighter">Verified</span>
+              {:else if activity.status_guru === "rejected"}
+                <span class="bg-red-100 text-red-700 py-1.5 px-3 rounded-xl text-xs font-bold uppercase tracking-tighter">Rejected</span>
               {:else}
-                <span
-                  class="bg-amber-100 text-amber-700 py-1.5 px-3 rounded-xl text-xs font-bold uppercase tracking-tighter"
-                  >Pending</span
-                >
+                <span class="bg-amber-100 text-amber-700 py-1.5 px-3 rounded-xl text-xs font-bold uppercase tracking-tighter">Pending</span>
+              {/if}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              {#if activity.status_ortu === "verified"}
+                <span class="bg-green-100 text-green-700 py-1.5 px-3 rounded-xl text-xs font-bold uppercase tracking-tighter">Verified</span>
+              {:else if activity.status_ortu === "rejected"}
+                <span class="bg-red-100 text-red-700 py-1.5 px-3 rounded-xl text-xs font-bold uppercase tracking-tighter">Rejected</span>
+              {:else}
+                <span class="bg-amber-100 text-amber-700 py-1.5 px-3 rounded-xl text-xs font-bold uppercase tracking-tighter">Pending</span>
               {/if}
             </td>
           </tr>
         {:else}
           <tr>
-            <td colspan="5" class="px-6 py-16 text-center text-gray-400 font-medium">
+            <td colspan="7" class="px-6 py-16 text-center text-gray-400 font-medium">
               <div class="flex flex-col items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Belum ada data untuk filter ini
+                Belum ada data aktivitas untuk filter ini
               </div>
             </td>
           </tr>
@@ -419,7 +406,7 @@
           <p class="text-sm text-gray-500 font-medium">
             Hal. <span class="text-gray-900">{currentPage}</span> dari <span class="text-gray-900">{totalPages}</span>
             <span class="mx-2 opacity-30">|</span>
-            <span class="text-gray-400">{groupedActivities.length} Entri Harian</span>
+            <span class="text-gray-400">{sortedActivities.length} Aktivitas</span>
           </p>
         </div>
         <div class="flex gap-2">
@@ -441,6 +428,7 @@
       </div>
     </div>
   {/if}
+
 </div>
 
 <style>
