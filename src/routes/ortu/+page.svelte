@@ -15,13 +15,25 @@
   let password = "";
   let editId = null;
   let isModalOpen = false;
+  let searchTerm = "";
 
   // Pagination
   let currentPage = 1;
   let itemsPerPage = 10;
 
-  $: totalPages = Math.ceil($ortus.length / itemsPerPage);
-  $: paginatedOrtus = $ortus.slice(
+  $: filteredOrtus = $ortus.filter((ortu) => {
+    return (
+      searchTerm === "" ||
+      ortu.username.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
+
+  $: {
+    if (searchTerm) currentPage = 1;
+  }
+
+  $: totalPages = Math.ceil(filteredOrtus.length / itemsPerPage);
+  $: paginatedOrtus = filteredOrtus.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
@@ -253,6 +265,25 @@
   </div>
 </div>
 
+<div class="mb-6 flex flex-wrap items-end gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+  <div class="flex-1 min-w-[300px]">
+    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Cari Ortu</label>
+    <div class="relative">
+      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <input
+        type="text"
+        bind:value={searchTerm}
+        placeholder="Ketik nama orang tua..."
+        class="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-medium text-gray-700 hover:bg-white"
+      />
+    </div>
+  </div>
+</div>
+
 <div
   class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
 >
@@ -329,10 +360,10 @@
           >
           to
           <span class="font-medium"
-            >{Math.min(currentPage * itemsPerPage, $ortus.length)}</span
+            >{Math.min(currentPage * itemsPerPage, filteredOrtus.length)}</span
           >
           of
-          <span class="font-medium">{$ortus.length}</span>
+          <span class="font-medium">{filteredOrtus.length}</span>
           results
         </p>
       </div>

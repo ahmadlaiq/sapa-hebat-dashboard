@@ -8,6 +8,7 @@
   let filterSiswaId = "";
   let filterType = "";
   let filterStatus = "";
+  let searchTerm = "";
 
   // Pagination
   let currentPage = 1;
@@ -24,6 +25,17 @@
 
   // Logic Filtering
   $: filteredActivities = $activities.filter((act) => {
+    const studentName = getSiswaName(act.user_id).toLowerCase();
+    const type = (act.activity_type || "").toLowerCase();
+    const detail = (act.items || act.notes || "").toLowerCase();
+    const search = searchTerm.toLowerCase();
+
+    const matchSearch =
+      searchTerm === "" ||
+      studentName.includes(search) ||
+      type.includes(search) ||
+      detail.includes(search);
+
     const matchSiswa =
       filterSiswaId === "" ||
       act.user_id == filterSiswaId ||
@@ -36,12 +48,12 @@
       act.status_guru === filterStatus ||
       act.status_ortu === filterStatus;
 
-    return matchSiswa && matchType && matchStatus;
+    return matchSearch && matchSiswa && matchType && matchStatus;
   });
 
-  // Reset pagination when filter changes
+  // Reset pagination when filter or search changes
   $: {
-    if (filterSiswaId || filterType || filterStatus) {
+    if (filterSiswaId || filterType || filterStatus || searchTerm) {
       currentPage = 1;
     }
   }
@@ -90,11 +102,28 @@
 
 <!-- Filters -->
 <div
-  class="mb-6 flex flex-wrap gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm"
+  class="mb-6 flex flex-wrap items-end gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm"
 >
-  <div class="w-full md:w-64">
-    <label class="block text-sm font-medium text-gray-700 mb-1"
-      >Filter by Siswa</label
+  <div class="flex-1 min-w-[300px]">
+    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Cari Aktivitas</label>
+    <div class="relative">
+      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <input
+        type="text"
+        bind:value={searchTerm}
+        placeholder="Cari siswa, tipe, atau detail kegiatan..."
+        class="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-medium text-gray-700 hover:bg-white"
+      />
+    </div>
+  </div>
+
+  <div class="w-full md:w-48">
+    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1"
+      >Filter Siswa</label
     >
     <select
       use:select2Action={{ value: filterSiswaId, placeholder: "All Siswa" }}
@@ -108,9 +137,9 @@
     </select>
   </div>
 
-  <div class="w-full md:w-64">
-    <label class="block text-sm font-medium text-gray-700 mb-1"
-      >Filter by Type</label
+  <div class="w-full md:w-48">
+    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1"
+      >Filter Tipe</label
     >
     <select
       use:select2Action={{ value: filterType, placeholder: "All Types" }}
@@ -124,9 +153,9 @@
     </select>
   </div>
 
-  <div class="w-full md:w-64">
-    <label class="block text-sm font-medium text-gray-700 mb-1"
-      >Filter by Status</label
+  <div class="w-full md:w-48">
+    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1"
+      >Filter Status</label
     >
     <select
       use:select2Action={{ value: filterStatus, placeholder: "All Statuses" }}

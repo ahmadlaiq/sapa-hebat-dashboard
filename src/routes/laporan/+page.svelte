@@ -6,6 +6,7 @@
   let filterKelas = "";
   let filterWaktu = "semua"; // "semua", "mingguan", "bulanan", "tahunan"
   let filterType = "";
+  let searchTerm = "";
 
   // Pagination
   let currentPage = 1;
@@ -22,6 +23,17 @@
 
   // Logic Filtering
   $: filteredActivities = $activities.filter((act) => {
+    const studentName = getSiswaName(act.user_id).toLowerCase();
+    const type = (act.activity_type || "").toLowerCase();
+    const detail = (act.items || act.notes || "").toLowerCase();
+    const search = searchTerm.toLowerCase();
+
+    const matchSearch =
+      searchTerm === "" ||
+      studentName.includes(search) ||
+      type.includes(search) ||
+      detail.includes(search);
+
     const matchSiswa =
       filterSiswaId === "" ||
       act.user_id == filterSiswaId ||
@@ -54,7 +66,7 @@
       }
     }
 
-    return matchSiswa && matchType && matchWaktu && matchKelas;
+    return matchSearch && matchSiswa && matchType && matchWaktu && matchKelas;
   });
 
   // Sort activities newest first
@@ -72,9 +84,9 @@
     (a) => a.status_guru !== "verified" || a.status_ortu !== "verified",
   ).length;
 
-  // Reset pagination when filter changes
+  // Reset pagination when filter or search changes
   $: {
-    if (filterSiswaId || filterType || filterWaktu || filterKelas) {
+    if (filterSiswaId || filterType || filterWaktu || filterKelas || searchTerm) {
       currentPage = 1;
     }
   }
@@ -222,9 +234,26 @@
 
 <!-- Filters (Hidden on Print) -->
 <div
-  class="mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-md shadow-gray-200/50 print:hidden"
+  class="mb-8 flex flex-wrap items-end gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-md shadow-gray-200/50 print:hidden"
 >
-  <div>
+  <div class="flex-1 min-w-[300px]">
+    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Cari Laporan</label>
+    <div class="relative">
+      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <input
+        type="text"
+        bind:value={searchTerm}
+        placeholder="Cari siswa atau aktivitas..."
+        class="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-medium text-gray-700 hover:bg-white"
+      />
+    </div>
+  </div>
+
+  <div class="w-full md:w-40">
     <label
       for="filter-waktu"
       class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Periode</label
@@ -242,7 +271,7 @@
     </select>
   </div>
 
-  <div>
+  <div class="w-full md:w-48">
     <label
       for="filter-siswa"
       class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Siswa</label
@@ -260,7 +289,7 @@
     </select>
   </div>
 
-  <div>
+  <div class="w-full md:w-48">
     <label
       for="filter-tipe"
       class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Tipe</label
@@ -278,7 +307,7 @@
     </select>
   </div>
 
-  <div>
+  <div class="w-full md:w-40">
     <label
       for="filter-kelas"
       class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Kelas</label
