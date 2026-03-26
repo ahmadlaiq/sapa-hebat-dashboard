@@ -1,50 +1,68 @@
-import jQuery from 'jquery';
-
-// Ensure jQuery is available globally for plugins that might need it
-if (typeof window !== 'undefined') {
-  window.$ = window.jQuery = jQuery;
-}
-
-
 /**
- * Svelte Action to initialize Select2 on a select element.
- * Usage: <select use:select2={{ value: selectedValue, placeholder: 'Select...' }} on:select2_change={...}>
+ * Svelte Action untuk Select2 menggunakan jQuery dari CDN (window.$).
+ * jQuery dan Select2 dimuat via CDN di app.html, sehingga window.$ selalu tersedia.
+ *
+ * Usage: <select use:select2Action={{ value: someVar, placeholder: 'Pilih...' }} on:select2_change={...}>
  */
 export function select2Action(node, options = {}) {
-  const $node = jQuery(node);
-  
-  async function init() {
-    await import('select2');
+  let initialized = false;
+
+  function getJQuery() {
+    // Gunakan $ dari CDN (window.$) yang sudah dimuat di app.html
+    return window.$;
+  }
+
+  function init() {
+    const $ = getJQuery();
+    if (!$ || typeof $.fn.select2 !== 'function') {
+      // CDN belum siap, coba lagi sebentar lagi
+      setTimeout(init, 100);
+      return;
+    }
+
+    const $node = $(node);
+
     $node.select2({
       placeholder: options.placeholder || '',
       width: '100%',
-      dropdownParent: options.dropdownParent || jQuery(document.body),
-      // allowClear: true
+      dropdownParent: $(document.body),
     });
 
     // Set initial value
-    if (options.value !== undefined) {
-      $node.val(options.value).trigger('change.select2');
+    if (options.value !== undefined && options.value !== null) {
+      $node.val(String(options.value)).trigger('change.select2');
     }
 
-    $node.on('change', (e) => {
+    $node.on('change.select2action', () => {
       node.dispatchEvent(new CustomEvent('select2_change', {
         detail: $node.val()
       }));
     });
+
+    initialized = true;
   }
 
-  // Use setTimeout to ensure the DOM is ready and any each-blocks are finished
+  // Tunggu DOM selesai render sebelum init
   setTimeout(init, 0);
 
   return {
     update(newOptions) {
-      if (newOptions.value !== undefined && $node.val() !== newOptions.value) {
-        $node.val(newOptions.value).trigger('change.select2');
+      const $ = getJQuery();
+      if (!initialized || !$ || typeof $.fn.select2 !== 'function') return;
+
+      const $node = $(node);
+      const newVal = newOptions.value !== undefined ? String(newOptions.value) : '';
+
+      if ($node.val() !== newVal) {
+        $node.val(newVal).trigger('change.select2');
       }
-      // Re-initialize if options change significantly if needed
     },
     destroy() {
+      const $ = getJQuery();
+      if (!$ || !initialized) return;
+
+      const $node = $(node);
+      $node.off('change.select2action');
       if ($node.data('select2')) {
         $node.select2('destroy');
       }

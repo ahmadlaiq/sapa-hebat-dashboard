@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import 'select2/dist/css/select2.min.css';
-
 /* Premium Select2 Customization */
 .select2-container--default .select2-selection--single {
   background-color: #f9fafb !important;
