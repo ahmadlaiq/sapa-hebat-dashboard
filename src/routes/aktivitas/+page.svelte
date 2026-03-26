@@ -1,5 +1,6 @@
 <script>
   import { activities, siswas } from "$lib/stores";
+  import { select2Action } from "$lib/select2";
   import { db } from "$lib/firebase";
   import { deleteDoc, doc } from "firebase/firestore";
   import Swal from "sweetalert2";
@@ -96,8 +97,9 @@
       >Filter by Siswa</label
     >
     <select
-      bind:value={filterSiswaId}
-      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+      use:select2Action={{ value: filterSiswaId, placeholder: "All Siswa" }}
+      on:select2_change={(e) => filterSiswaId = e.detail}
+      class="w-full"
     >
       <option value="">All Siswa</option>
       {#each $siswas as siswa}
@@ -111,8 +113,9 @@
       >Filter by Type</label
     >
     <select
-      bind:value={filterType}
-      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+      use:select2Action={{ value: filterType, placeholder: "All Types" }}
+      on:select2_change={(e) => filterType = e.detail}
+      class="w-full"
     >
       <option value="">All Types</option>
       {#each activityTypes as type}
@@ -126,8 +129,9 @@
       >Filter by Status</label
     >
     <select
-      bind:value={filterStatus}
-      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+      use:select2Action={{ value: filterStatus, placeholder: "All Statuses" }}
+      on:select2_change={(e) => filterStatus = e.detail}
+      class="w-full"
     >
       <option value="">All Statuses</option>
       <option value="pending">Pending</option>

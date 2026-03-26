@@ -1,5 +1,6 @@
 <script>
   import { activities, siswas } from "$lib/stores";
+  import { select2Action } from "$lib/select2";
 
   let filterSiswaId = "";
   let filterKelas = "";
@@ -257,8 +258,9 @@
     >
     <select
       id="filter-waktu"
-      bind:value={filterWaktu}
-      class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-gray-700"
+      use:select2Action={{ value: filterWaktu }}
+      on:select2_change={(e) => filterWaktu = e.detail}
+      class="w-full"
     >
       <option value="semua">Semua Waktu</option>
       <option value="mingguan">7 Hari Terakhir</option>
@@ -274,8 +276,9 @@
     >
     <select
       id="filter-siswa"
-      bind:value={filterSiswaId}
-      class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-gray-700"
+      use:select2Action={{ value: filterSiswaId, placeholder: "Semua Siswa" }}
+      on:select2_change={(e) => filterSiswaId = e.detail}
+      class="w-full"
     >
       <option value="">Semua Siswa</option>
       {#each $siswas as siswa}
@@ -291,8 +294,9 @@
     >
     <select
       id="filter-tipe"
-      bind:value={filterType}
-      class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-gray-700"
+      use:select2Action={{ value: filterType, placeholder: "Semua Tipe" }}
+      on:select2_change={(e) => filterType = e.detail}
+      class="w-full"
     >
       <option value="">Semua Tipe</option>
       {#each activityTypes as type}
@@ -308,8 +312,9 @@
     >
     <select
       id="filter-kelas"
-      bind:value={filterKelas}
-      class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-gray-700"
+      use:select2Action={{ value: filterKelas, placeholder: "Semua Kelas" }}
+      on:select2_change={(e) => filterKelas = e.detail}
+      class="w-full"
     >
       <option value="">Semua Kelas</option>
       <option value="7">Kelas 7</option>

@@ -1,5 +1,6 @@
 <script>
   import { siswas, gurus, ortus, kelases } from "$lib/stores";
+  import { select2Action } from "$lib/select2";
   import { db } from "$lib/firebase";
   import {
     collection,
@@ -318,8 +319,9 @@
       >Filter by Guru</label
     >
     <select
-      bind:value={filterGuruId}
-      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+      use:select2Action={{ value: filterGuruId, placeholder: "All Gurus" }}
+      on:select2_change={(e) => filterGuruId = e.detail}
+      class="w-full"
     >
       <option value="">All Gurus</option>
       {#each $gurus as guru}
@@ -333,8 +335,9 @@
       >Filter by Ortu</label
     >
     <select
-      bind:value={filterOrtuId}
-      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+      use:select2Action={{ value: filterOrtuId, placeholder: "All Ortus" }}
+      on:select2_change={(e) => filterOrtuId = e.detail}
+      class="w-full"
     >
       <option value="">All Ortus</option>
       {#each $ortus as ortu}
@@ -348,8 +351,9 @@
       >Filter by Kelas</label
     >
     <select
-      bind:value={filterKelas}
-      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+      use:select2Action={{ value: filterKelas, placeholder: "All Kelas" }}
+      on:select2_change={(e) => filterKelas = e.detail}
+      class="w-full"
     >
       <option value="">All Kelas</option>
       {#each $kelases as item}
@@ -573,8 +577,9 @@
             >Assign Guru</label
           >
           <select
-            bind:value={selectedGuruId}
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+            use:select2Action={{ value: selectedGuruId, placeholder: "Select a Guru" }}
+            on:select2_change={(e) => selectedGuruId = e.detail}
+            class="w-full"
           >
             <option value="" disabled>Select a Guru</option>
             {#each $gurus as guru}
@@ -588,8 +593,9 @@
             >Assign Ortu</label
           >
           <select
-            bind:value={selectedOrtuId}
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+            use:select2Action={{ value: selectedOrtuId, placeholder: "Select an Ortu" }}
+            on:select2_change={(e) => selectedOrtuId = e.detail}
+            class="w-full"
           >
             <option value="" disabled>Select an Ortu</option>
             {#each $ortus as ortu}
@@ -603,8 +609,9 @@
             >Kelas</label
           >
           <select
-            bind:value={kelas}
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+            use:select2Action={{ value: kelas, placeholder: "Select Kelas" }}
+            on:select2_change={(e) => kelas = e.detail}
+            class="w-full"
           >
             {#each $kelases as item}
               <option value={item.name}>{item.name}</option>
