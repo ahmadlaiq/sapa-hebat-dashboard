@@ -13,6 +13,7 @@
 
   let username = "";
   let password = "";
+  let nama = "";
   let editId = null;
   let isModalOpen = false;
   let searchTerm = "";
@@ -50,10 +51,12 @@
     if (user) {
       username = user.username;
       password = user.password;
+      nama = user.nama || user.username;
       editId = user._id;
     } else {
       username = "";
       password = "";
+      nama = "";
       editId = null;
     }
     isModalOpen = true;
@@ -70,11 +73,13 @@
         await updateDoc(doc(db, "users", editId), {
           username,
           password,
+          nama: nama || username,
         });
       } else {
         await addDoc(collection(db, "users"), {
           username,
           password,
+          nama: nama || username,
           role: "ortu",
           id: Date.now(),
         });
@@ -117,6 +122,7 @@
   function handleExport() {
     const dataToExport = $ortus.map((o) => ({
       ID: o.id,
+      Nama: o.nama || o.username,
       Username: o.username,
       Password: o.password,
     }));
@@ -124,7 +130,7 @@
   }
 
   function handleDownloadTemplate() {
-    downloadTemplate(["username", "password"], "Template_Import_Ortu");
+    downloadTemplate(["nama", "username", "password"], "Template_Import_Ortu");
   }
 
   async function handleImport(event) {
@@ -160,6 +166,7 @@
             await addDoc(collection(db, "users"), {
               username: String(item.username),
               password: String(item.password),
+              nama: item.nama ? String(item.nama) : String(item.username),
               role: "ortu",
               id: Date.now() + Math.floor(Math.random() * 1000),
             });
@@ -296,6 +303,10 @@
         >
         <th
           class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+          >Nama</th
+        >
+        <th
+          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
           >Username</th
         >
         <th
@@ -314,6 +325,10 @@
           <td
             class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-xs font-mono"
             >{ortu.id}</td
+          >
+          <td
+            class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+            >{ortu.nama || ortu.username}</td
           >
           <td
             class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
@@ -338,7 +353,7 @@
         </tr>
       {:else}
         <tr>
-          <td colspan="4" class="px-6 py-10 text-center text-gray-500">
+          <td colspan="5" class="px-6 py-10 text-center text-gray-500">
             No data available. Click "Add Ortu" to create one.
           </td>
         </tr>
@@ -445,6 +460,18 @@
       </h3>
 
       <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1"
+            >Nama</label
+          >
+          <input
+            type="text"
+            bind:value={nama}
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+            placeholder="Enter nama (Budi...)"
+          />
+        </div>
+
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1"
             >Username</label

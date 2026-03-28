@@ -14,6 +14,7 @@
 
   let username = "";
   let password = "";
+  let nama = "";
   let selectedGuruId = "";
   let selectedOrtuId = "";
   let kelas = "";
@@ -73,6 +74,7 @@
     if (user) {
       username = user.username;
       password = user.password;
+      nama = user.nama || user.username;
       selectedGuruId = user.guru_id || "";
       selectedOrtuId = user.ortu_id || "";
       kelas = user.kelas || "";
@@ -80,6 +82,7 @@
     } else {
       username = "";
       password = "";
+      nama = "";
       selectedGuruId = "";
       selectedOrtuId = "";
       kelas = $kelases.length > 0 ? $kelases[0].name : "";
@@ -98,6 +101,7 @@
       const payload = {
         username,
         password,
+        nama: nama || username,
         guru_id: selectedGuruId,
         ortu_id: selectedOrtuId,
         kelas,
@@ -160,6 +164,7 @@
   function handleExport() {
     const dataToExport = filteredSiswas.map((s) => ({
       ID: s.id,
+      Nama: s.nama || s.username,
       Username: s.username,
       Password: s.password,
       Kelas: s.kelas,
@@ -170,7 +175,7 @@
   }
 
   function handleDownloadTemplate() {
-    downloadTemplate(["username", "password", "guru_id", "ortu_id", "kelas"], "Template_Import_Siswa");
+    downloadTemplate(["nama", "username", "password", "guru_id", "ortu_id", "kelas"], "Template_Import_Siswa");
   }
 
   async function handleImport(event) {
@@ -207,6 +212,7 @@
             await addDoc(collection(db, "users"), {
               username: String(item.username),
               password: String(item.password),
+              nama: item.nama ? String(item.nama) : String(item.username),
               guru_id: item.guru_id,
               ortu_id: item.ortu_id,
               kelas: String(item.kelas || ""),
@@ -227,6 +233,39 @@
       Swal.fire("Error", "Failed to import Excel: " + e.message, "error");
     } finally {
       event.target.value = ""; // Reset file input
+    }
+  }
+
+  // Inject Nama Script
+  let isInjecting = false;
+  async function injectNamaKeSemua() {
+    const result = await Swal.fire({
+      title: "Injeksi Nama?",
+      text: "Aksi ini akan menyetel kolom 'nama' menggunakan 'username' pada semua Siswa, Guru, dan Ortu yang belum memiliki field nama. Lanjutkan?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, Injeksi",
+    });
+
+    if (result.isConfirmed) {
+      isInjecting = true;
+      let injectCount = 0;
+      try {
+        const allUsers = [...$siswas, ...$gurus, ...$ortus];
+        for (const user of allUsers) {
+          if (!user.nama && user._id) {
+            await updateDoc(doc(db, "users", user._id), {
+              nama: user.username,
+            });
+            injectCount++;
+          }
+        }
+        Swal.fire("Berhasil", `Berhasil menginjeksi nama ke ${injectCount} user!`, "success");
+      } catch (err) {
+        Swal.fire("Error", "Gagal menginjeksi: " + err.message, "error");
+      } finally {
+        isInjecting = false;
+      }
     }
   }
 </script>
@@ -292,6 +331,22 @@
         />
       </svg>
       Template
+    </button>
+
+    <button
+      on:click={injectNamaKeSemua}
+      disabled={isInjecting}
+      class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg shadow transition-colors flex items-center {isInjecting ? 'opacity-50' : ''}"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-5 w-5 mr-2"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+      >
+        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+      </svg>
+      {isInjecting ? "Injecting..." : "Inject Nama"}
     </button>
 
     <button
@@ -394,7 +449,11 @@
         >
         <th
           class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-          >Siswa Name</th
+          >Nama</th
+        >
+        <th
+          class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+          >Username</th
         >
         <th
           class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -420,6 +479,10 @@
           <td
             class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-xs font-mono"
             >{siswa.id}</td
+          >
+          <td
+            class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+            >{siswa.nama || siswa.username}</td
           >
           <td
             class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
@@ -457,7 +520,7 @@
         </tr>
       {:else}
         <tr>
-          <td colspan="6" class="px-6 py-10 text-center text-gray-500">
+          <td colspan="7" class="px-6 py-10 text-center text-gray-500">
             No students found matching the filters.
           </td>
         </tr>
@@ -567,6 +630,18 @@
       </h3>
 
       <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1"
+            >Nama</label
+          >
+          <input
+            type="text"
+            bind:value={nama}
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+            placeholder="Enter nama (Budi...)"
+          />
+        </div>
+
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1"
             >Username</label
